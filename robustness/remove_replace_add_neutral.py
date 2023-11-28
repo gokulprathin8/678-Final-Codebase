@@ -1,7 +1,8 @@
 import random
-import nltk
 
+import nltk
 from nltk.corpus import stopwords
+
 nltk.download('stopwords')
 
 
@@ -10,7 +11,6 @@ def auto_word_modification(sentence: str, threshold=0.2):
   neutral_words = ["something", "thing", "area", "case", "day"]  # Example list of neutral words
   words = sentence.split()
   modified = []
-
   for word in words:
     if random.random() < threshold:
       if word.lower() not in stop_words:
@@ -18,11 +18,8 @@ def auto_word_modification(sentence: str, threshold=0.2):
     else:
       if word.lower() not in stop_words:
         modified.append(word)
-
   if random.random() < threshold:
-    # Add a random neutral word
     modified.append(random.choice(neutral_words))
-
   return ' '.join(modified)
 
 
