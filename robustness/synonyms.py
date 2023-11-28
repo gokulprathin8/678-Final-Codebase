@@ -51,7 +51,4 @@ def replace_with_synonyms(sentence, change_threshold=0.3):
     new_words.append(word)
 
   return ' '.join(new_words)
-if __name__ == "__main__":
-  sentence = 'The quick brown fox jumped over the lazy dog'
-  print('original sentence:', sentence)
-  print('with synonyms:', replace_with_synonyms(sentence))
+
