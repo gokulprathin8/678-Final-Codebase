@@ -1,53 +1,54 @@
 import json
-
+from pprint import pprint
 from nltk.tokenize.treebank import TreebankWordDetokenizer
+
+from robustness.synonyms import replace_with_synonyms
 
 
 def get_context(*, json_data, merged_sentence):
   events = json_data['gold_evt_links']
-  event_frame = dict()
-  for e in events:
-    event_end = e[0]
-    event_start = e[1]
-    event_type = e[2]
+  event_frame = []
 
-    if event_start >= event_end:
-      tmp = event_start
-      event_start = event_end
-      event_end = tmp
-    event_frame[event_type] = TreebankWordDetokenizer().detokenize(merged_sentence[event_start[1]:event_end[1]])
+  for e in events:
+    event, argument, event_type = e[0], e[1], e[2]
+    event_start, event_end = event[0], event[1]
+    argument_start, argument_end = argument[0], argument[1]
+
+    # Adjust slicing to extract correct context
+    event_ctx = merged_sentence[event_start:event_end + 1]
+    argument_ctx = merged_sentence[argument_start:argument_end + 1]
+
+    event_ctx_text = ' '.join(event_ctx)
+    argument_ctx_text = ' '.join(argument_ctx)
+
+    event_frame.append({
+      'Event': event_ctx_text,
+      'Argument': argument_ctx_text,
+      'Event_Type': event_type,
+      'Event_Position': (event_start, event_end),
+      'Argument_Position': (argument_start, argument_end)
+    })
+
   return event_frame
 
 
-def process_train_data():
+
+def process_test_data():
   data = list()
-  with open('data/train.jsonlines', mode='r') as f:
+  with open('data/test.jsonlines', mode='r') as f:
     for line in f:
       current_line = json.loads(line)
       data.append(current_line)
-      # source = current_line['source_url']
       sentences = current_line['sentences']
       merged_sentence = [item for sublist in sentences for item in sublist]
       complete_sentence = TreebankWordDetokenizer().detokenize(merged_sentence)
       context = get_context(json_data=current_line, merged_sentence=merged_sentence)
-      print(complete_sentence, context)
+      # pprint(context)
 
-
-      # code for active <-> passive
-
-      # for c in context.values():
-      #   # check if context is active or passive
-      #   is_passive_sent = cvt_active_passive.is_passive(c)
-      #   if is_passive_sent:
-      #     # if sentence is passive, convert it to active
-      #     converted_sent = cvt_active_passive.convert_passive_to_active(c)
-      #   else:
-      #     # if sentence is active, convert it to passive
-      #     converted_sent = cvt_active_passive.convert_active_to_passive(c)
-
-
+      updated_json = replace_with_synonyms(complete_sentence, context)
+      pprint(updated_json)
 
       exit(0)
 
 
-process_train_data()
+process_test_data()

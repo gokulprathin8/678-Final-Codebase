@@ -1,5 +1,8 @@
+import itertools
+from pprint import pprint
+import json
 import random
-
+from nltk.tokenize.treebank import TreebankWordDetokenizer
 
 def swap_words(sentence: str, threshold=0.6):
   words = sentence.split()
@@ -13,5 +16,16 @@ def swap_words(sentence: str, threshold=0.6):
 
 
 if __name__ == "__main__":
-  swapped_sentence = swap_words("The quick brown fox jumps over the lazy dog.", threshold=0.6)
-  print(swapped_sentence)
+  with open('../data/train.jsonlines') as f:
+    for line in f:
+      dict_mapping = dict()
+      before_swap_vals = list()
+      json_line = json.loads(line)
+      sentences = json_line['sentences']
+      merged_sentences = list(itertools.chain.from_iterable(sentences))
+
+
+
+      exit(0)
+  # swapped_sentence = swap_words("The quick brown fox jumps over the lazy dog.", threshold=0.6)
+  # print(swapped_sentence)
