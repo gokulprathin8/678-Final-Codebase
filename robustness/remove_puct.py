@@ -1,5 +1,6 @@
 import re
 import json
+from typing import List
 
 import spacy
 import itertools
@@ -12,7 +13,8 @@ from nltk.tokenize.treebank import TreebankWordTokenizer, TreebankWordDetokenize
 nlp = spacy.load("en_core_web_sm")
 pipeline = spacy_cleaner.Cleaner(
   nlp,
-  removers.remove_punctuation_token,
+  removers.remove_email_token,
+  removers.remove_url_token
 )
 def remove_punctuation(sent):
   return pipeline.clean(sent)
@@ -31,12 +33,17 @@ def regex_fuzzy_search(main_string, query_string):
 def regex_fuzzy_search_token_list(token_list, query_string):
   escaped_query = re.escape(query_string)
   fuzzy_pattern = '.?'.join(escaped_query)
+  shortest_match = (len(token_list) + 1, -1, -1)  # (match length, start_index, end_index)
+
   for start_index in range(len(token_list)):
     for end_index in range(start_index, len(token_list)):
       token_str = ' '.join(token_list[start_index:end_index + 1])
       if re.search(fuzzy_pattern, token_str):
-        return start_index, end_index
-  return -1, -1
+        match_length = end_index - start_index + 1
+        if match_length < shortest_match[0]:
+          shortest_match = (match_length, start_index, end_index)
+  return (shortest_match[1], shortest_match[2]) if shortest_match[1] != -1 else (-1, -1)
+
 
 def fuzzy_search(main_string, query_string):
   if len(query_string) <= 3:
@@ -60,7 +67,7 @@ def fuzzy_search(main_string, query_string):
   else:
     return -1, -1
 
-with open('../data/train.jsonlines') as f:
+with open('../data/test.jsonlines') as f:
   for line in f:
     json_line = json.loads(line)
     sentences = json_line['sentences']
@@ -101,18 +108,29 @@ with open('../data/train.jsonlines') as f:
       tokenized_punct = TreebankWordTokenizer().tokenize(punct_removed[0])
       print(tokenized_punct)
 
-      # event fuzzy search
-      new_evt_start, new_evt_end = regex_fuzzy_search_token_list(token_list=tokenized_punct, query_string=event_str)
-      # argument fuzzy search
-      new_arg_start, new_arg_end = regex_fuzzy_search_token_list(token_list=tokenized_punct, query_string=argument_str)
+      try:
+        # event fuzzy search
+        new_evt_start, new_evt_end = regex_fuzzy_search_token_list(token_list=tokenized_punct, query_string=event_str)
+        # argument fuzzy search
+        new_arg_start, new_arg_end = regex_fuzzy_search_token_list(token_list=tokenized_punct, query_string=argument_str)
+      except:
+        break
 
-      print(new_evt_start, new_evt_end, event_str)
+      z[0][0] = new_evt_start
+      z[0][1] = new_evt_end
+      z[1][0] = new_arg_start
+      z[1][1] = new_arg_end
 
-      exit(0)
-
-
-
-
-
+    # now need to calculate the array signature (list of lists)
+    arr_sizes: List[int] = list()
+    for z in sentences:
+      arr_sizes.append(len(z))
+    new_sents = list()
+    for z in arr_sizes:
+      new_sents.append(tokenized_punct[:z])
+      del tokenized_punct[:z]
+    json_line['sentences'] = new_sents
+    with open('../eval-data/remove_email_and_urls.jsonlines', 'a') as s:
+      s.write(json.dumps(json_line) + "\n")
 
 
